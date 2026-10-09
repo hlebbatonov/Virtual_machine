@@ -34,7 +34,7 @@ enum Instructions
 
 InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, FILE* file);
 Errors RunInstructions(int* code_frame, size_t code_frame_size);
-bool IsEqual (double a, double b);
+bool IsEqual(double a, double b);
 
 int main()
 {
@@ -44,8 +44,7 @@ int main()
     FILE* file = stdin;
     InputErrors err = ReadFromFileToCodeFrame(&code_frame, &code_frame_size, file);
 
-    if (err == INPUT_OK) Errors err_run = RunInstructions(code_frame, code_frame_size);
-
+    if (err == INPUT_OK) RunInstructions(code_frame, code_frame_size);
     free(code_frame);
 
 }
@@ -66,15 +65,16 @@ InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, F
 
     while (fgets(buffer, sizeof(buffer), file) != NULL)
     {
-        int curr_instruction = 0;
-        int curr_num = 0;
+        int curr_instruction = -1;
+        int curr_num = -1;
 
         int input_res = sscanf(buffer, "%d %d", &curr_instruction, &curr_num);
+
         if (input_res <= 0) {free(*code_frame); *code_frame_size = cp; return ERR_INSTRUCT_DID_NOT_READ;}
+        else if ((curr_instruction < PUSH || curr_instruction > HLT)) \
+            {free(*code_frame); *code_frame_size = cp; return ERR_INSTRUCT_DID_NOT_READ;}
         else if (input_res != 2 && curr_instruction == PUSH) {free(*code_frame); *code_frame_size = cp; return ERR_NUM_DID_NOT_READ;}
         else if (input_res == 2 && curr_instruction != PUSH) {free(*code_frame); *code_frame_size = cp; return ERR_INSTRUCT_DID_NOT_READ;}
-        else if ((curr_instruction < PUSH || curr_instruction > HLT) && input_res == 1) \
-            {free(*code_frame); *code_frame_size = cp; return ERR_INSTRUCT_DID_NOT_READ;}
 
         if (cp >= input_size - 2)
         {
@@ -115,19 +115,19 @@ Errors RunInstructions(int* code_frame, size_t code_frame_size)
             if (err != OK) return err;
             i++;
         }
+        else if (code_frame[i] == OUT)
+        {
+            double curr_elem = 0;
+            err = StackTop(&stack, &curr_elem);
+            if (err != OK) return err;
+            printf("%g", curr_elem);
+            i++;
+            continue;
+        }
         else
         {
             double curr_elem_l = 0;
             double curr_elem_r = 0;
-
-            if (code_frame[i] == OUT)
-            {
-                err = StackTop(&stack, &curr_elem_l);
-                if (err != OK) return err;
-                printf("%g", curr_elem_l);
-                i++;
-                continue;
-            }
 
             err = StackPop(&stack, &curr_elem_l);
             if (err != OK) return err;
