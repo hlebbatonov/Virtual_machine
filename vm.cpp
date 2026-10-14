@@ -1,58 +1,32 @@
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <stdio.h>
-#include <stdlib.h>
-#include "stack.h"
+#include "common.h"
 
-#define MAX_INPUT_SIZE 10000000000
-#define START_INPUT_SIZE 16
-#define BUFFER_SIZE 50
-#define START_STACK_SIZE 10
-#define ACCURACY 10e-7
-
-enum InputErrors
-{
-    INPUT_OK = 0,
-    ERR_FILE_NOT_OPENED,
-    ERR_BUFFER_NOT_CREATED,
-    ERR_INSTRUCT_DID_NOT_READ,
-    ERR_NUM_DID_NOT_READ,
-    ERR_CALLOC_FAILED
-};
-
-enum Instructions
-{
-    PUSH = 1,
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    OUT,
-    HLT
-};
-
-InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, FILE* file);
+InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, char* file_name);
 Errors RunInstructions(int* code_frame, size_t code_frame_size);
 bool IsEqual(double a, double b);
 
-int main()
+int main(int argc, char *argv[])
 {
-    int* code_frame = {};
+    int* code_frame = NULL;
     size_t code_frame_size;
 
-    FILE* file = stdin;
-    InputErrors err = ReadFromFileToCodeFrame(&code_frame, &code_frame_size, file);
+    if (argc < 2)
+    {
+        printf("Error: missing required file. VM expects <assembler file>.\n");
+        return 1;
+    }
+    char* file_name = argv[1];
+    InputErrors err = ReadFromFileToCodeFrame(&code_frame, &code_frame_size, file_name);
 
     if (err == INPUT_OK) RunInstructions(code_frame, code_frame_size);
     free(code_frame);
 
 }
 
-InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, FILE* file)
+InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, char* file_name)
 {
     size_t input_size = START_INPUT_SIZE;
 
+    FILE* file = fopen(file_name, "r");
     if (file == NULL)
         return ERR_FILE_NOT_OPENED;
 
@@ -70,11 +44,13 @@ InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, F
 
         int input_res = sscanf(buffer, "%d %d", &curr_instruction, &curr_num);
 
-        if (input_res <= 0) {free(*code_frame); *code_frame_size = cp; return ERR_INSTRUCT_DID_NOT_READ;}
+        if (input_res <= 0) {free(*code_frame); *code_frame = NULL; *code_frame_size = cp; fclose(file); return ERR_INSTRUCT_DID_NOT_READ;}
         else if ((curr_instruction < PUSH || curr_instruction > HLT)) \
-            {free(*code_frame); *code_frame_size = cp; return ERR_INSTRUCT_DID_NOT_READ;}
-        else if (input_res != 2 && curr_instruction == PUSH) {free(*code_frame); *code_frame_size = cp; return ERR_NUM_DID_NOT_READ;}
-        else if (input_res == 2 && curr_instruction != PUSH) {free(*code_frame); *code_frame_size = cp; return ERR_INSTRUCT_DID_NOT_READ;}
+            {free(*code_frame); *code_frame = NULL; *code_frame_size = cp; fclose(file);  return ERR_INSTRUCT_DID_NOT_READ;}
+        else if (input_res != 2 && curr_instruction == PUSH)
+             {free(*code_frame); *code_frame = NULL; *code_frame_size = cp; fclose(file);  return ERR_NUM_DID_NOT_READ;}
+        else if (input_res == 2 && curr_instruction != PUSH)
+            {free(*code_frame); *code_frame = NULL; *code_frame_size = cp; fclose(file); return ERR_INSTRUCT_DID_NOT_READ;}
 
         if (cp >= input_size - 2)
         {
@@ -84,6 +60,8 @@ InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, F
             {
                 input_size /= 2;
                 free(*code_frame);
+                *code_frame = NULL;
+                fclose(file);
                 return ERR_CALLOC_FAILED;
             }
             *code_frame = new_code_frame;
@@ -91,9 +69,9 @@ InputErrors ReadFromFileToCodeFrame(int** code_frame, size_t* code_frame_size, F
 
         (*code_frame)[cp++] = curr_instruction;
         if (curr_instruction == PUSH) (*code_frame)[cp++] = curr_num;
-        if (curr_instruction == HLT) {*code_frame_size = cp; return INPUT_OK;}
     }
     *code_frame_size = cp;
+    fclose(file);
     return INPUT_OK;
 }
 
@@ -113,7 +91,8 @@ Errors RunInstructions(int* code_frame, size_t code_frame_size)
         {
             err = StackPush(&stack, (double)(code_frame[i + 1]));
             if (err != OK) return err;
-            i++;
+            i += 2;
+            continue;
         }
         else if (code_frame[i] == OUT)
         {
