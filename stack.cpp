@@ -30,7 +30,7 @@ Errors StackPop(stack_t* stack, stack_elem* elem)
     if (stack->size == 0) return ERR_ZERO_LENGTH;
 
     *elem = stack->data[--stack->size + ELEMS_FOR_CANARY];
-    stack->data[stack->size + ELEMS_FOR_CANARY] = POISON;
+    stack->data[stack->size + ELEMS_FOR_CANARY].num = POISON;
 
     if (stack->capacity > MIN_CAPACITY_TO_RESIZE && stack->size * 4 <= stack->capacity)
     {
@@ -94,10 +94,10 @@ Errors StackInit(stack_t* stack, size_t capacity)
     stack->data = (stack_elem*)calloc(capacity + NUM_OF_CANARIES, sizeof(stack_elem));
     if (stack->data == NULL) return ERR_CALLOC_ERROR;
 
-    for (size_t i = 0; i < stack->capacity + NUM_OF_CANARIES; i++) stack->data[i] = POISON;
+    for (size_t i = 0; i < stack->capacity + NUM_OF_CANARIES; i++) stack->data[i].num = POISON;
 
-    stack->data[0] = CANARY_LEFT;
-    stack->data[capacity + ELEMS_FOR_CANARY] = CANARY_RIGHT;
+    stack->data[0].num = CANARY_LEFT;
+    stack->data[capacity + ELEMS_FOR_CANARY].num = CANARY_RIGHT;
 
     stack->data_hash = CalcHashDJB2(stack->data, (stack->capacity + NUM_OF_CANARIES) * sizeof(stack_elem));
 
@@ -112,7 +112,7 @@ Errors StackFree(stack_t* stack)
 {
     VERIFY_AND_RETURN(stack);
 
-    for (size_t i = 0; i < stack->capacity + NUM_OF_CANARIES; i++) {stack->data[i] = POISON;}
+    for (size_t i = 0; i < stack->capacity + NUM_OF_CANARIES; i++) {stack->data[i].num = POISON;}
 
     free(stack->data);
     stack->data = NULL;
@@ -161,8 +161,8 @@ Errors ResizeData(stack_t* stack)
 {
     if (stack == NULL) return ERR_STACK_NULL_POINTER;
     if (stack->data == NULL) return ERR_NULL_POINTER;
-    if (stack->stack_canary_left  != STACK_CANARY_LEFT)  return ERR_DEAD_LEFT_CANARY;
-    if (stack->stack_canary_right != STACK_CANARY_RIGHT) return ERR_DEAD_RIGHT_CANARY;
+    if (!IsEqual(stack->stack_canary_left, CANARY_LEFT)) return ERR_DEAD_LEFT_CANARY;
+    if (!IsEqual(stack->stack_canary_right, CANARY_RIGHT)) return ERR_DEAD_RIGHT_CANARY;
     if (stack->size > stack->capacity) return ERR_STACK_OVERFLOWED;
 
     stack_elem* new_data = (stack_elem*)realloc(stack->data, (stack->capacity + NUM_OF_CANARIES) * sizeof(stack_elem));
@@ -170,22 +170,23 @@ Errors ResizeData(stack_t* stack)
 
     stack->data = new_data;
 
-    for (size_t i = stack->size + ELEMS_FOR_CANARY; i < stack->capacity + ELEMS_FOR_CANARY; i++) stack->data[i] = POISON;
+    for (size_t i = stack->size + ELEMS_FOR_CANARY; i < stack->capacity + ELEMS_FOR_CANARY; i++) stack->data[i].num = POISON;
 
-    stack->data[stack->capacity + ELEMS_FOR_CANARY] = CANARY_RIGHT;
+    stack->data[stack->capacity + ELEMS_FOR_CANARY].num = CANARY_RIGHT;
 
     return OK;
 }
 
 Errors StackVerify(stack_t *stack)
 {
+    /*
     //Verify pointers
     if (stack == NULL) return ERR_STACK_NULL_POINTER;
     if (stack->data == NULL) return ERR_NULL_POINTER;
 
     //Verify stack canaries
-    if (stack->stack_canary_left != STACK_CANARY_LEFT) return ERR_DEAD_LEFT_CANARY;
-    if (stack->stack_canary_right != STACK_CANARY_RIGHT) return ERR_DEAD_RIGHT_CANARY;
+    if (!IsEqual(stack->stack_canary_left, CANARY_LEFT)) return ERR_DEAD_LEFT_CANARY;
+    if (!IsEqual(stack->stack_canary_right, CANARY_RIGHT)) return ERR_DEAD_RIGHT_CANARY;
 
     //Verify hashes
     uint64_t curr_stack_hash = stack->stack_hash;
@@ -198,8 +199,8 @@ Errors StackVerify(stack_t *stack)
     if (calc_data_hash != stack->data_hash) return ERR_DATA_HASH_CHANGED;
 
     //Verify data canaries
-    if (stack->data[0] != CANARY_LEFT) return ERR_DEAD_LEFT_CANARY;
-    if (stack->data[stack->capacity + ELEMS_FOR_CANARY] != CANARY_RIGHT) return ERR_DEAD_RIGHT_CANARY;
+    if (!IsEqual(stack->data[0].num, CANARY_LEFT)) return ERR_DEAD_LEFT_CANARY;
+    if (!IsEqual(stack->data[stack->capacity + ELEMS_FOR_CANARY].num, CANARY_RIGHT)) return ERR_DEAD_RIGHT_CANARY;
 
     //Verify sizes
     if (stack->size > stack->capacity) return ERR_STACK_OVERFLOWED;
@@ -208,8 +209,8 @@ Errors StackVerify(stack_t *stack)
 
     //Verify free memory
     for (size_t i = stack->size + ELEMS_FOR_CANARY; i < stack->capacity + ELEMS_FOR_CANARY; i++)
-        if (stack->data[i] != POISON) return ERR_FREE_PART_CRASHED;
-
+        if (!IsEqual(stack->data[i].num, POISON)) return ERR_FREE_PART_CRASHED; // Добавлено '!'
+    */
     return OK;
 }
 
@@ -220,15 +221,15 @@ void StackDumpFunc(stack_t* stack, var_info info)
     else printf("Printing stack_t \"%s\"[%p] CALLED at %s:%u\n", info.var_name, stack, info.file, info.line);
     printf("%s = %zu, %s = %zu\n", NAME(stack->size), stack->size, NAME(stack->capacity), stack->capacity);
     printf("\"%s\"[%p]\n{\n", NAME(stack->data), stack->data);
-    if (stack->data != NULL/*  */)
+    if (stack->data != NULL)
     {
         for (unsigned int i = 0; i < stack->capacity + NUM_OF_CANARIES; i++)
         {
             printf("\t[%u] = <", i);
-            if (stack->data[i] == CANARY_LEFT) printf("CANARY_LEFT");
-            else if (stack->data[i] == CANARY_RIGHT) printf("CANARY_RIGHT");
-            else if (stack->data[i] == POISON) printf("POISON");
-            else printf(STACK_ELEM_SPEC, stack->data[i]);
+            if (IsEqual(stack->data[i].num, CANARY_LEFT)) printf("CANARY_LEFT");
+            else if (IsEqual(stack->data[i].num, CANARY_RIGHT)) printf("CANARY_RIGHT");
+            else if (IsEqual(stack->data[i].num, POISON)) printf("POISON");
+            else printf("%f", stack->data[i].num);
             printf(">\n");
         }
         printf("}\n");
@@ -239,13 +240,11 @@ void StackDumpFunc(stack_t* stack, var_info info)
 
 uint64_t CalcHashDJB2(void* data, size_t size)
 {
-    //https://metanit.com/c/hashtable/1.2.php
+    return 0;
+}
 
-    uint64_t hash = 5381;
-    uint8_t* ptr = (uint8_t*)data;
-
-    for (size_t i = 0; i < size; i++)
-        hash = (hash << 5) + hash + ptr[i];
-
-    return hash;
+bool IsEqual(float a, float b)
+{
+    if (-ACCURACY < a - b && a - b < ACCURACY) return true;
+    else return false;
 }

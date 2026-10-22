@@ -3,26 +3,25 @@
 struct CPU
 {
     stack_t* stack;
-    unsigned int cp;
-    double AX, BX, CX, DX;
+    unsigned int pc;
+    float AX, BX, CX, DX;
 };
 
-struct CodeFrame
-{
-    int* code_frame;
-    size_t code_frame_size;
-};
 
-InputErrors ReadFromFileToCodeFrame(CodeFrame* codeframe, char* file_name);
+InputErrors ReadFromFileToCodeFrame(CodeFrame* codeframe, char* executable_file_name);
 Errors RunInstructions(CPU* cpu, CodeFrame* codeframe);
-bool IsEqual(double a, double b);
+Errors InitCodeframe(CodeFrame* codeframe);
 
 int main(int argc, char *argv[])
 {
     CPU cpu1 = {};
     CodeFrame codeframe1 = {};
+
+    Errors err_init = InitCodeframe(&codeframe1);
+    if (err_init != OK) return err_init;
+
     cpu1.stack = (stack_t*)calloc(1, sizeof(stack_t));
-    Errors err_init = StackInit(cpu1.stack, START_STACK_SIZE);
+    err_init = StackInit(cpu1.stack, START_STACK_SIZE);
     if (err_init != OK) return err_init;
 
     if (argc < 2)
@@ -30,136 +29,121 @@ int main(int argc, char *argv[])
         printf("Error: missing required file. VM expects <assembler file>.\n");
         return 1;
     }
-    char* file_name = argv[1];
+    char* executable_file_name = argv[1];
 
-    InputErrors err = ReadFromFileToCodeFrame(&codeframe1, file_name);
+    InputErrors err = ReadFromFileToCodeFrame(&codeframe1, executable_file_name);
+    if (err == INPUT_OK) {Errors err1 = RunInstructions(&cpu1, &codeframe1);}
 
-    if (err == INPUT_OK) RunInstructions(&cpu1, &codeframe1);
     free(codeframe1.code_frame);
 
 }
 
-InputErrors ReadFromFileToCodeFrame(CodeFrame* codeframe, char* file_name)
+InputErrors ReadFromFileToCodeFrame(CodeFrame* codeframe, char* executable_file_name)
 {
-    codeframe->code_frame_size = START_INPUT_SIZE;
+    FILE* executable_file = fopen(executable_file_name, "rb");
+    if (executable_file == NULL) {printf("Error: no such file <%s>\n", executable_file_name); return ERR_FILE_NOT_OPENED;}
 
-    FILE* file = fopen(file_name, "r");
-    if (file == NULL)
-        return ERR_FILE_NOT_OPENED;
+    size_t num_of_r_cells = fread(codeframe->code_frame, sizeof(cell), MAX_EXE_FILE_SIZE, executable_file);
+    if (ferror(executable_file))
+        {fclose(executable_file); printf("Error: invalid .bin file"); return ERR_ARE_ERRORS;}
+    codeframe->code_frame_size = num_of_r_cells;
 
-    codeframe->code_frame = (int*)calloc(codeframe->code_frame_size, sizeof(int));
-    if (codeframe->code_frame == NULL)
-        return ERR_BUFFER_NOT_CREATED;
+    fclose(executable_file);
 
-    char buffer[BUFFER_SIZE] = {};
-    unsigned int cp = 0;
-
-    while (fgets(buffer, sizeof(buffer), file) != NULL)
-    {
-        int curr_instruction = -1;
-        int curr_num = -1;
-
-        int input_res = sscanf(buffer, "%d %d", &curr_instruction, &curr_num);
-
-        if (input_res <= 0)
-            {free(codeframe->code_frame); codeframe->code_frame = NULL; fclose(file); return ERR_INSTRUCT_DID_NOT_READ;}
-        else if ((curr_instruction < PUSH || curr_instruction > HLT)) \
-            {free(codeframe->code_frame); codeframe->code_frame = NULL; fclose(file); return ERR_INSTRUCT_DID_NOT_READ;}
-        else if (input_res != 2 && curr_instruction == PUSH)
-            {free(codeframe->code_frame); codeframe->code_frame = NULL; fclose(file); return ERR_NUM_DID_NOT_READ;}
-        else if (input_res == 2 && curr_instruction != PUSH)
-            {free(codeframe->code_frame); codeframe->code_frame = NULL; fclose(file); return ERR_INSTRUCT_DID_NOT_READ;}
-
-        if (cp >= codeframe->code_frame_size - 2)
-        {
-            codeframe->code_frame_size *= 2;
-            int* new_code_frame = (int*)realloc(codeframe->code_frame, codeframe->code_frame_size * sizeof(int));
-            if (new_code_frame == NULL)
-            {
-                codeframe->code_frame_size = 0;
-                free(codeframe->code_frame);
-                codeframe->code_frame = NULL;
-                fclose(file);
-                return ERR_CALLOC_FAILED;
-            }
-            codeframe->code_frame = new_code_frame;
-        }
-
-        (codeframe->code_frame)[cp++] = curr_instruction;
-        if (curr_instruction == PUSH) (codeframe->code_frame)[cp++] = curr_num;
-    }
-    codeframe->code_frame_size = cp;
-    int* new_code_frame = (int*)realloc(codeframe->code_frame, codeframe->code_frame_size * sizeof(int));
-    if (new_code_frame == NULL)
-    {
-        codeframe->code_frame_size = 0;
-        free(codeframe->code_frame);
-        codeframe->code_frame = NULL;
-        fclose(file);
-        return ERR_CALLOC_FAILED;
-    }
-    codeframe->code_frame = new_code_frame;
-    fclose(file);
     return INPUT_OK;
 }
 
 Errors RunInstructions(CPU* cpu, CodeFrame* codeframe)
 {
-    cpu->cp = 0;
+    cpu->pc = 0;
 
-    while (cpu->cp < codeframe->code_frame_size)
+    while (cpu->pc < codeframe->code_frame_size)
     {
-        if (codeframe->code_frame[cpu->cp] == HLT) return OK;
-
-        else if (codeframe->code_frame[cpu->cp] == PUSH)
+        if (codeframe->code_frame[cpu->pc].instr == 0) return OK;
+        if (codeframe->code_frame[cpu->pc].instr == HLT) return OK;
+        else if (codeframe->code_frame[cpu->pc].instr == JMP)
         {
-            Errors err = StackPush(cpu->stack, (double)(codeframe->code_frame[cpu->cp + 1]));
-            if (err != OK) return err;
-            cpu->cp += 2;
+            cpu->pc = codeframe->code_frame[cpu->pc + 1].point;
             continue;
         }
-        else if (codeframe->code_frame[cpu->cp] == OUT)
+        /*else if (codeframe->code_frame[cpu->pc].instr > JMP && codeframe->code_frame[cpu->pc].instr <= JNE)
         {
-            double curr_elem = 0;
-            Errors err = StackTop(cpu->stack, &curr_elem);
-            if (err != OK) return err;
-            printf("%g", curr_elem);
-            cpu->cp++;
-            continue;
-        }
-        else
-        {
-            double curr_elem_l = 0;
-            double curr_elem_r = 0;
+            bool need_to_jump = false;
+            cell curr_elem_l = {};
+            cell curr_elem_r = {};
 
             Errors err = StackPop(cpu->stack, &curr_elem_l);
             if (err != OK) return err;
             err = StackPop(cpu->stack, &curr_elem_r);
             if (err != OK) return err;
 
-            switch(codeframe->code_frame[cpu->cp])
+            switch(codeframe->code_frame[cpu->pc].instr)
             {
-                case ADD: err = StackPush(cpu->stack, curr_elem_r + curr_elem_l); break;
-                case SUB: err = StackPush(cpu->stack, curr_elem_r - curr_elem_l); break;
-                case MUL: err = StackPush(cpu->stack, curr_elem_r * curr_elem_l); break;
+                case JA: need_to_jump = (curr_elem_l.num > curr_elem_r.num); break
+
+
+            }
+            cpu->pc = codeframe->code_frame[cpu->pc + 1].point;
+            continue;
+        }*/
+        else if (codeframe->code_frame[cpu->pc].instr == PUSH)
+        {
+            Errors err = StackPush(cpu->stack, codeframe->code_frame[cpu->pc + 1]);
+            if (err != OK) return err;
+            cpu->pc += 2;
+            continue;
+        }
+        else if (codeframe->code_frame[cpu->pc].instr == OUT)
+        {
+            cell curr_elem = {};
+            Errors err = StackTop(cpu->stack, &curr_elem);
+            if (err != OK) return err;
+            printf("%g\n", curr_elem.num);
+            cpu->pc++;
+            continue;
+        }
+        else
+        {
+            cell curr_elem_l = {};
+            cell curr_elem_r = {};
+            cell curr_res = {};
+
+            Errors err = StackPop(cpu->stack, &curr_elem_l);
+            if (err != OK) return err;
+            err = StackPop(cpu->stack, &curr_elem_r);
+            if (err != OK) return err;
+
+            switch(codeframe->code_frame[cpu->pc].instr)
+            {
+                case ADD: curr_res.num = curr_elem_r.num + curr_elem_l.num; break;
+                case SUB: curr_res.num = curr_elem_r.num - curr_elem_l.num; break;
+                case MUL: curr_res.num = curr_elem_r.num * curr_elem_l.num; break;
                 case DIV:
                 {
-                    if (IsEqual(curr_elem_l, 0) == false) err = StackPush(cpu->stack, curr_elem_r / curr_elem_l);
+                    if (IsEqual(curr_elem_l.num, 0) == false)
+                        curr_res.num = curr_elem_r.num / curr_elem_l.num;
                     else return ERR_DIV_ZERO;
                     break;
                 }
                 default: return ERR_UNKNOWN_INSTRUCTION;
             }
+            err = StackPush(cpu->stack, curr_res);
             if (err != OK) return err;
+            cpu->pc++;
+            continue;
         }
-        cpu->cp++;
+        cpu->pc++;
     }
     return OK;
 }
 
-bool IsEqual(double a, double b)
+Errors InitCodeframe(CodeFrame* codeframe)
 {
-    return (-ACCURACY < a - b && a - b < ACCURACY);
+    codeframe->code_frame = (cell*)calloc(MAX_EXE_FILE_SIZE, sizeof(cell));
+    if (codeframe->code_frame == NULL) return ERR_CALLOC_ERROR;
+
+    codeframe->code_frame_size = START_CODEFRAME_SIZE;
+    return OK;
 }
 
 

@@ -5,23 +5,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+union cell
+{
+    int instr;
+    int point;
+    int reg;
+    float num;
+};
 
-typedef double stack_elem;
+typedef cell stack_elem;
 
-#define CANARY_LEFT  (stack_elem)0xDEADC0DE
-#define CANARY_RIGHT (stack_elem)0xBAADBEEF
+#define ACCURACY 1e-5
 
-#define POISON (stack_elem)0xDEADBEEF
-#define POISON_FOR_FREE_MEM 0xBEDABEDA
+#define CANARY_LEFT  (float)0xDEAD
+#define CANARY_RIGHT (float)0xBAAD
+
+#define POISON (float)0xDABB
+#define POISON_FOR_FREE_MEM (float)0xBEDA
 
 #define ELEMS_FOR_CANARY 1
 #define NUM_OF_CANARIES 2
 
-#define STACK_CANARY_LEFT 0xC00FFEE
-#define STACK_CANARY_RIGHT 0xBA0BABB
+#define STACK_CANARY_LEFT (float)0xC00F
+#define STACK_CANARY_RIGHT (float)0xBA0B
 
 #define MIN_CAPACITY_TO_RESIZE 10
 #define MAX_SIZE 1000000
+
 
 struct stack_t
 {
@@ -71,17 +81,9 @@ Errors StackVerify(stack_t* stack);
 Errors StackTop(stack_t* stack, stack_elem* elem);
 Errors StackCopy(stack_t* stack_dst, stack_t* stack_src);
 uint64_t CalcHashDJB2(void* data, size_t size);
+bool IsEqual(float a, float b);
 
 #define NAME(x) #x
-#define STACK_ELEM_SPEC _Generic((stack_elem)0, \
-    int: "%d",                                  \
-    char: "%c",                                 \
-    double: "%g",                               \
-    float: "%g",                                \
-    char*: "%s",                                \
-    unsigned int: "%zu",                        \
-    default: "%p")
-
 #define StackDump(stack) StackDumpFunc(stack, (var_info){NAME(stack), __FILE__, __LINE__})
 
 #define ASSERT_RETURN_VALUE(err) do {if (err != OK) \
@@ -92,6 +94,8 @@ uint64_t CalcHashDJB2(void* data, size_t size);
     abort();                                        \
 }} while(0)
 
+
+
 #ifdef NDEBUG
 #define VERIFY_AND_RETURN(stack_to_ver)
 #else
@@ -99,3 +103,4 @@ uint64_t CalcHashDJB2(void* data, size_t size);
     if (error_ver != OK) return error_ver;                                               \
     } while(0)
 #endif
+

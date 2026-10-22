@@ -25,11 +25,11 @@ InputErrors CompileFile(char* assm_file_name, char* program_file_name)
     if (program == NULL) {printf("Error: couldn't create <%s>\n", program_file_name); fclose(assm); return ERR_FILE_NOT_OPENED;}
 
     char buffer[BUFFER_SIZE] = {};
-    unsigned int cp = 0;
+    unsigned int pc = 0;
 
     while (fgets(buffer, sizeof(buffer), assm) != NULL)
     {
-        cp++;
+        pc++;
 
         if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') continue;
 
@@ -39,20 +39,20 @@ InputErrors CompileFile(char* assm_file_name, char* program_file_name)
         int input_res = sscanf(buffer, "%d %d", &curr_instruction, &curr_num);
 
         if (input_res <= 0) \
-            {printf("Error: incorrect line at %s:%u <%s>\n", assm_file_name, cp, program_file_name); \
+            {printf("Error: incorrect line at %s:%u <%s>\n", assm_file_name, pc, program_file_name); \
             fclose(assm); fclose(program);return ERR_INSTRUCT_DID_NOT_READ;}
         else if ((curr_instruction < PUSH || curr_instruction > HLT)) \
-            {printf("Error: unknown instruction at %s:%u <%s>\n", assm_file_name, cp, program_file_name); \
+            {printf("Error: unknown instruction at %s:%u <%s>\n", assm_file_name, pc, program_file_name); \
             fclose(assm); fclose(program); return ERR_INSTRUCT_DID_NOT_READ;}
         else if (input_res != 2 && curr_instruction == PUSH) \
-            {printf("Error: incorrect PUSH arg at %s:%u <%s>\n", assm_file_name, cp, program_file_name); \
+            {printf("Error: incorrect PUSH arg at %s:%u <%s>\n", assm_file_name, pc, program_file_name); \
             fclose(assm); fclose(program); return ERR_NUM_DID_NOT_READ;}
         else if (input_res == 2 && curr_instruction != PUSH) \
-            {printf("Error: too much args at %s:%u <%s>\n", assm_file_name, cp, program_file_name); \
+            {printf("Error: too much args at %s:%u <%s>\n", assm_file_name, pc, program_file_name); \
             fclose(assm); fclose(program); return ERR_INSTRUCT_DID_NOT_READ;}
 
         char curr_instruction_name[INSTR_NAME_SIZE] = {};
-        strcpy(curr_instruction_name, instructions_list[curr_instruction]);
+        strpcy(curr_instruction_name, instructions_list[curr_instruction]);
 
         if (curr_instruction == PUSH) fprintf(program, "%s %d\n", curr_instruction_name, curr_num);
         else fprintf(program, "%s\n", curr_instruction_name);
