@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
     {
-        printf("Error: missing required file. VM expects <assembler file>.\n");
+        printf("Usage: vm <executable file>\n");
         return 1;
     }
     char* executable_file_name = argv[1];

@@ -61,9 +61,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 3)
     {
-        // TODO: use usage style:
-        // Usage: compiler <program_file file> <assembler file>
-        printf("Error: missing required files. Compiler expects <program_file file> and <assembler file>.\n");
+        printf("Usage: compiler <program_file file> <executable file>\n");
         return 1;
     }
     char* program_file_name = argv[1];
@@ -83,7 +81,7 @@ int main(int argc, char *argv[])
 
 InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
 {
-    //FIXME: assert
+    if (program_file_name == NULL) {printf("Error: program filename crashed\n", program_file_name); return ERR_FILE_NOT_OPENED;}
     FILE* program_file = fopen(program_file_name, "r");
     if (program_file == NULL) {printf("Error: no such file <%s>\n", program_file_name); return ERR_FILE_NOT_OPENED;}
 
@@ -120,9 +118,11 @@ InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
 
 InputErrors PassSecond(char* program_file_name, char* executable_file_name, PointsArr* points_arr)
 {
+    if (program_file_name == NULL) {printf("Error: program filename crashed\n", program_file_name); return ERR_FILE_NOT_OPENED;}
     FILE* program_file = fopen(program_file_name, "r");
     if (program_file == NULL) {printf("Error: no such file <%s>\n", program_file_name); return ERR_FILE_NOT_OPENED;}
 
+    if (executable_file_name == NULL) {printf("Error: executable file filename crashed\n", program_file_name); return ERR_FILE_NOT_OPENED;}
     FILE* executable_file = fopen(executable_file_name, "wb");
     if (executable_file == NULL) {printf("Error: no such file <%s>\n", executable_file_name); return ERR_FILE_NOT_OPENED;}
 
