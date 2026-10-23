@@ -8,7 +8,7 @@ struct PointsArr
     size_t points_arr_capacity;
 };
 
-#define VALIDATE_POINT(validation, message_err) do                                            \
+#define VALIDATE_POINT(validation, message_err) do                                           \
 {                                                                                            \
     if (validation)                                                                          \
     {                                                                                        \
@@ -29,20 +29,18 @@ struct PointsArr
 
 #define SAFE_REALLOC_POINTS_ARR() do \
 {                                                                                                           \
-    /* Сохраняем старую емкость перед умножением, чтобы знать, откуда начинать зануление */                 \
     size_t old_capacity = points_arr->points_arr_capacity;                                                  \
     points_arr->points_arr_capacity *= 2;                                                                   \
     char** new_points_arr = (char**)realloc(points_arr->points_arr,                                         \
-        points_arr->points_arr_capacity * sizeof(char*));                                                  \
+        points_arr->points_arr_capacity * sizeof(char*));                                                   \
     if (new_points_arr == NULL)                                                                             \
     {                                                                                                       \
         points_arr->points_arr_capacity = 0;                                                                \
-        free(points_arr->points_arr);                                                                        \
+        free(points_arr->points_arr);                                                                       \
         points_arr->points_arr = NULL;                                                                      \
         return ERR_CALLOC_FAILED;                                                                           \
     }                                                                                                       \
     points_arr->points_arr = new_points_arr;                                                                \
-                                                                                                             \
     for (size_t i = old_capacity; i < points_arr->points_arr_capacity; i++) {                               \
         points_arr->points_arr[i] = NULL;                                                                   \
     }                                                                                                       \
@@ -81,7 +79,7 @@ int main(int argc, char *argv[])
 
 InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
 {
-    if (program_file_name == NULL) {printf("Error: program filename crashed\n", program_file_name); return ERR_FILE_NOT_OPENED;}
+    if (program_file_name == NULL) {printf("Error: program filename crashed\n"); return ERR_FILE_NOT_OPENED;}
     FILE* program_file = fopen(program_file_name, "r");
     if (program_file == NULL) {printf("Error: no such file <%s>\n", program_file_name); return ERR_FILE_NOT_OPENED;}
 
@@ -118,11 +116,11 @@ InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
 
 InputErrors PassSecond(char* program_file_name, char* executable_file_name, PointsArr* points_arr)
 {
-    if (program_file_name == NULL) {printf("Error: program filename crashed\n", program_file_name); return ERR_FILE_NOT_OPENED;}
+    if (program_file_name == NULL) {printf("Error: program filename crashed\n"); return ERR_FILE_NOT_OPENED;}
     FILE* program_file = fopen(program_file_name, "r");
     if (program_file == NULL) {printf("Error: no such file <%s>\n", program_file_name); return ERR_FILE_NOT_OPENED;}
 
-    if (executable_file_name == NULL) {printf("Error: executable file filename crashed\n", program_file_name); return ERR_FILE_NOT_OPENED;}
+    if (executable_file_name == NULL) {printf("Error: executable file filename crashed\n"); return ERR_FILE_NOT_OPENED;}
     FILE* executable_file = fopen(executable_file_name, "wb");
     if (executable_file == NULL) {printf("Error: no such file <%s>\n", executable_file_name); return ERR_FILE_NOT_OPENED;}
 
