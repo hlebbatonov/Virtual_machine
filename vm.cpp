@@ -4,7 +4,8 @@ struct CPU
 {
     stack_t* stack;
     unsigned int pc;
-    float AX, BX, CX, DX;
+    cell AX, BX, CX, DX;
+    bool FX;
 };
 
 
@@ -66,26 +67,41 @@ Errors RunInstructions(CPU* cpu, CodeFrame* codeframe)
             cpu->pc = codeframe->code_frame[cpu->pc + 1].point;
             continue;
         }
-        /*else if (codeframe->code_frame[cpu->pc].instr > JMP && codeframe->code_frame[cpu->pc].instr <= JNE)
+        else if (codeframe->code_frame[cpu->pc].instr > JMP && codeframe->code_frame[cpu->pc].instr <= JNE)
         {
-            bool need_to_jump = false;
-            cell curr_elem_l = {};
-            cell curr_elem_r = {};
+            cpu->FX = false;
 
-            Errors err = StackPop(cpu->stack, &curr_elem_l);
+            Errors err = StackPop(cpu->stack, &cpu->AX);
             if (err != OK) return err;
-            err = StackPop(cpu->stack, &curr_elem_r);
+            err = StackPop(cpu->stack, &cpu->BX);
             if (err != OK) return err;
 
             switch(codeframe->code_frame[cpu->pc].instr)
             {
-                case JA: need_to_jump = (curr_elem_l.num > curr_elem_r.num); break
-
-
+                case JA: cpu->FX   = (cpu->AX.num > cpu->BX.num); break;
+                case JAE: cpu->FX  = (cpu->AX.num >= cpu->BX.num); break;
+                case JB: cpu->FX   = (cpu->AX.num < cpu->BX.num); break;
+                case JBE: cpu->FX  = (cpu->AX.num <= cpu->BX.num); break;
+                case JE: cpu->FX   = (cpu->AX.num == cpu->BX.num); break;
+                case JNE: cpu->FX  = (cpu->AX.num != cpu->BX.num); break;
+                default: return ERR_UNKNOWN_INSTRUCTION;
             }
-            cpu->pc = codeframe->code_frame[cpu->pc + 1].point;
-            continue;
-        }*/
+            err = StackPush(cpu->stack, cpu->BX);
+            if (err != OK) return err;
+            err = StackPush(cpu->stack, cpu->AX);
+            if (err != OK) return err;
+            if (cpu->FX == true)
+            {
+                cpu->pc = codeframe->code_frame[cpu->pc + 1].point;
+                continue;
+            }
+            else
+            {
+                cpu->pc += 2;
+                continue;
+            }
+
+        }
         else if (codeframe->code_frame[cpu->pc].instr == PUSH)
         {
             Errors err = StackPush(cpu->stack, codeframe->code_frame[cpu->pc + 1]);
@@ -95,39 +111,34 @@ Errors RunInstructions(CPU* cpu, CodeFrame* codeframe)
         }
         else if (codeframe->code_frame[cpu->pc].instr == OUT)
         {
-            cell curr_elem = {};
-            Errors err = StackTop(cpu->stack, &curr_elem);
+            Errors err = StackTop(cpu->stack, &cpu->AX);
             if (err != OK) return err;
-            printf("%g\n", curr_elem.num);
+            printf("%g\n", cpu->AX.num);
             cpu->pc++;
             continue;
         }
         else
         {
-            cell curr_elem_l = {};
-            cell curr_elem_r = {};
-            cell curr_res = {};
-
-            Errors err = StackPop(cpu->stack, &curr_elem_l);
+            Errors err = StackPop(cpu->stack, &cpu->AX);
             if (err != OK) return err;
-            err = StackPop(cpu->stack, &curr_elem_r);
+            err = StackPop(cpu->stack, &cpu->BX);
             if (err != OK) return err;
 
             switch(codeframe->code_frame[cpu->pc].instr)
             {
-                case ADD: curr_res.num = curr_elem_r.num + curr_elem_l.num; break;
-                case SUB: curr_res.num = curr_elem_r.num - curr_elem_l.num; break;
-                case MUL: curr_res.num = curr_elem_r.num * curr_elem_l.num; break;
+                case ADD: cpu->CX.num = cpu->AX.num + cpu->BX.num; break;
+                case SUB: cpu->CX.num = cpu->AX.num - cpu->BX.num; break;
+                case MUL: cpu->CX.num = cpu->AX.num * cpu->BX.num; break;
                 case DIV:
                 {
-                    if (IsEqual(curr_elem_l.num, 0) == false)
-                        curr_res.num = curr_elem_r.num / curr_elem_l.num;
+                    if (IsEqual(cpu->AX.num, 0) == false)
+                        cpu->CX.num = cpu->BX.num / cpu->AX.num;
                     else return ERR_DIV_ZERO;
                     break;
                 }
                 default: return ERR_UNKNOWN_INSTRUCTION;
             }
-            err = StackPush(cpu->stack, curr_res);
+            err = StackPush(cpu->stack, cpu->CX);
             if (err != OK) return err;
             cpu->pc++;
             continue;
