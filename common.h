@@ -16,7 +16,6 @@
 #define POINT_NAME_SIZE 16
 #define START_POINTS_ARR_SIZE 20
 #define MAX_ARG_SIZE 10
-#define NUM_OF_REGS 4
 #define MAX_EXE_FILE_SIZE 1000
 
 enum InputErrors
@@ -30,7 +29,7 @@ enum InputErrors
     ERR_ARE_ERRORS
 };
 
-enum Instructions
+enum InstructionsCodes
 {
     PUSH = 1,
     RPUSH,
@@ -86,7 +85,8 @@ enum RegsIndexes
     REG_AX = 0,
     REG_BX,
     REG_CX,
-    REG_DX
+    REG_DX,
+    NUM_OF_REGS
 };
 
 static const char* reg_names[NUM_OF_REGS] =
@@ -96,3 +96,4 @@ static const char* reg_names[NUM_OF_REGS] =
     [REG_CX] = "CX",
     [REG_DX] = "DX",
 };
+

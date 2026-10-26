@@ -48,7 +48,7 @@ struct PointsArr
 
 InputErrors PassFirst(char* program_file_name, PointsArr* points_arr);
 InputErrors PassSecond(char* program_file_name, char* executable_file_name, PointsArr* points_arr);
-Instructions GetInstructionCode(char* point);
+InstructionsCodes GetInstructionCode(char* point);
 int GetPointPlace(char* buffer, PointsArr* points_arr);
 int GetRegIndex(char* reg_name);
 Errors InitPointArr(PointsArr* points_arr);
@@ -105,7 +105,7 @@ InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
         char temp_instr[MAX_INSTR_SIZE] = {};
         if (sscanf(point_name, "%s", temp_instr) == 1)
         {
-            Instructions temp_instr_code = GetInstructionCode(temp_instr);
+            InstructionsCodes temp_instr_code = GetInstructionCode(temp_instr);
             if (temp_instr_code >= PUSH && temp_instr_code <= JNE) pc += 2;
             else pc++;
         }
@@ -192,14 +192,14 @@ InputErrors PassSecond(char* program_file_name, char* executable_file_name, Poin
     return flag_errors;
 }
 
-Instructions GetInstructionCode(char* buffer)
+InstructionsCodes GetInstructionCode(char* buffer)
 {
     for (unsigned int i = 0; i < num_of_instr; i++)
     {
         if (strcmp(instructions_list[i], buffer) == 0)
-            return (Instructions)i;
+            return (InstructionsCodes)i;
     }
-    return (Instructions)0;
+    return (InstructionsCodes)0;
 }
 
 int GetPointPlace(char* point, PointsArr* points_arr)
