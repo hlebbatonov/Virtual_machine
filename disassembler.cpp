@@ -52,7 +52,7 @@ InputErrors CompileFile(char* assm_file_name, char* program_file_name)
             fclose(assm); fclose(program); return ERR_INSTRUCT_DID_NOT_READ;}
 
         char curr_instruction_name[INSTR_NAME_SIZE] = {};
-        strpcy(curr_instruction_name, instructions_list[curr_instruction]);
+        strpcy(curr_instruction_name, instr_names_list[curr_instruction]);
 
         if (curr_instruction == PUSH) fprintf(program, "%s %d\n", curr_instruction_name, curr_num);
         else fprintf(program, "%s\n", curr_instruction_name);

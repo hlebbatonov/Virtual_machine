@@ -55,6 +55,75 @@ Errors FuncOUT(CPU* cpu, CodeFrame* codeframe)
     return OK;
 }
 
+Errors FuncCALL(CPU* cpu, CodeFrame* codeframe)
+{
+    cell ret_pc = {};
+    ret_pc.point = cpu->pc + 2;
+    Errors err = StackPush(cpu->ret_points, ret_pc);
+    if (err != OK) return err;
+
+    cpu->pc = codeframe->code_frame[cpu->pc + 1].point;
+    return OK;
+}
+
+Errors FuncRET(CPU* cpu, CodeFrame* codeframe)
+{
+    cell ret_pc = {};
+    Errors err = StackPop(cpu->ret_points, &ret_pc);
+    if (err != OK) return err;
+
+    cpu->pc = ret_pc.point;
+    return OK;
+}
+
+Errors FuncVPUSH(CPU* cpu, CodeFrame* codeframe)
+{
+    cell index = {};
+    cell val = {};
+    index = codeframe->code_frame[cpu->pc + 1];
+    if (index.index >= cpu->video_ram_size) return ERR_INVALID_INDEX;
+
+    Errors err = StackPop(cpu->stack, &val);
+    if (err != OK) return err;
+
+    cpu->video_ram[index.index] = val;
+
+    cpu->pc += 2;
+    return OK;
+}
+
+Errors FuncVPOP(CPU* cpu, CodeFrame* codeframe)
+{
+    cell index = {};
+    cell val = {};
+    index = codeframe->code_frame[cpu->pc + 1];
+    if (index.index >= cpu->video_ram_size) return ERR_INVALID_INDEX;
+
+    val = cpu->video_ram[index.index];
+
+    Errors err = StackPush(cpu->stack, val);
+    if (err != OK) return err;
+
+    cpu->pc += 2;
+    return OK;
+}
+
+Errors FuncVOUT(CPU* cpu, CodeFrame* codeframe)
+{
+    for (unsigned int i = 0; i < screen_height; i++)
+    {
+        for (unsigned int j = 0; j < screen_width; j++)
+        {
+            printf("%7g ", cpu->video_ram[i * screen_width + j].num);
+        }
+        printf("\n");
+    }
+
+    cpu->pc += 1;
+    return OK;
+}
+
+
 Errors FuncOperand(CPU* cpu, CodeFrame* codeframe)
 {
     cell val_a = {};

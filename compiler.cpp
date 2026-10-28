@@ -13,7 +13,7 @@ struct PointsArr
     if (validation)                                                                          \
     {                                                                                        \
         printf("Error: %s at %s:%u\n", message_err, program_file_name, pc);                  \
-        flag_errors = ERR_ARE_ERRORS;                                                        \
+        flag_are_errors_in_program = ERR_ARE_ERRORS;                                                        \
     }                                                                                        \
 } while(0)
 
@@ -22,8 +22,8 @@ struct PointsArr
     if (validation)                                                                          \
     {                                                                                        \
         printf("Error: %s at %s:%u\n", message_err, program_file_name, pc);                  \
-        flag_errors = ERR_ARE_ERRORS;                                                        \
-        flag_curr_err = ERR_ARE_ERRORS;                                                      \
+        flag_are_errors_in_program = ERR_ARE_ERRORS;                                                        \
+        flag_err_at_curr_line = ERR_ARE_ERRORS;                                                      \
     }                                                                                        \
 } while(0)
 
@@ -69,7 +69,6 @@ int main(int argc, char *argv[])
     Errors init_err = InitPointArr(&points_arr);
     if (init_err != OK) {printf("Fatal error: no memory\n"); return 1;}
 
-
     InputErrors err = PassFirst(program_file_name, &points_arr);
     if (err != INPUT_OK) printf("Linking points error(s) occured\n");
     err = PassSecond(program_file_name, executable_file_name, &points_arr);
@@ -85,7 +84,7 @@ InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
 
     char point_name[POINT_NAME_SIZE] = {};
     unsigned int pc = 0;
-    InputErrors flag_errors = INPUT_OK;
+    InputErrors flag_are_errors_in_program = INPUT_OK;
 
     while (fgets(point_name, POINT_NAME_SIZE, program_file) != NULL)
     {
@@ -106,12 +105,12 @@ InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
         if (sscanf(point_name, "%s", temp_instr) == 1)
         {
             InstructionsCodes temp_instr_code = GetInstructionCode(temp_instr);
-            if (temp_instr_code >= PUSH && temp_instr_code <= JNE) pc += 2;
+            if (instr_info_list[temp_instr_code].instr_arg_type != NO_ARG) pc += 2;
             else pc++;
         }
     }
     fclose(program_file);
-    return flag_errors;
+    return flag_are_errors_in_program;
 }
 
 InputErrors PassSecond(char* program_file_name, char* executable_file_name, PointsArr* points_arr)
@@ -130,11 +129,11 @@ InputErrors PassSecond(char* program_file_name, char* executable_file_name, Poin
 
     char buffer[BUFFER_SIZE] = {};
     unsigned int pc = 0;
-    InputErrors flag_errors = INPUT_OK;
+    InputErrors flag_are_errors_in_program = INPUT_OK;
 
     while (fgets(buffer, sizeof(buffer), program_file) != NULL)
     {
-        InputErrors flag_curr_err = INPUT_OK;
+        InputErrors flag_err_at_curr_line = INPUT_OK;
 
         cell curr_instr = {};
         cell curr_arg = {};
@@ -145,43 +144,57 @@ InputErrors PassSecond(char* program_file_name, char* executable_file_name, Poin
 
         int input_instr_res = sscanf(buffer, "%s", temp_instr);
         VALIDATE_LINE(input_instr_res != 1, "invalid line");
-        if (flag_curr_err != INPUT_OK) continue;
+        if (flag_err_at_curr_line != INPUT_OK) continue;
 
         curr_instr.instr = GetInstructionCode(temp_instr);
         VALIDATE_LINE(curr_instr.instr == 0, "unknown instruction");
-        if (flag_curr_err != INPUT_OK) continue;
+        if (flag_err_at_curr_line != INPUT_OK) continue;
 
-        if (curr_instr.instr == PUSH)
+        if (instr_info_list[curr_instr.instr].instr_arg_type == NUM)
         {
             int input_res = sscanf(buffer, "%s %f", temp_instr, &curr_arg.num);
             VALIDATE_LINE(input_res != 2, "expected 1 float arg");
         }
-        else if (curr_instr.instr >= JMP && curr_instr.instr <= JNE)
+        else if (instr_info_list[curr_instr.instr].instr_arg_type == POINT)
         {
             int input_res = sscanf(buffer, "%s %s", temp_instr, temp_arg);
             VALIDATE_LINE(input_res != 2, "expected 1 point name arg");
             curr_arg.point = GetPointPlace(temp_arg, points_arr);
             VALIDATE_LINE(curr_arg.point < 0, "missed point");
         }
-        else if (curr_instr.instr == RPUSH || curr_instr.instr == RPOP)
+        else if (instr_info_list[curr_instr.instr].instr_arg_type == REG)
         {
             int input_res = sscanf(buffer, "%s %s", temp_instr, temp_arg);
             VALIDATE_LINE(input_res != 2, "expected 1 register name arg");
             curr_arg.reg = GetRegIndex(temp_arg);
             VALIDATE_LINE(curr_arg.reg < 0, "invalid register name");
         }
-        if (flag_curr_err == INPUT_OK)
+        else if (instr_info_list[curr_instr.instr].instr_arg_type == INDEX)
+        {
+            int input_res = sscanf(buffer, "%s [%u]", temp_instr, &curr_arg.index);
+            VALIDATE_LINE(input_res != 2, "expected 1 index arg");
+            VALIDATE_LINE(curr_arg.index < 0 || curr_arg.index >= video_ram_size, "invalid index");
+        }
+
+
+        if (flag_err_at_curr_line == INPUT_OK)
         {
             codeframe.code_frame[pc] = curr_instr;
-            if (curr_instr.instr < ADD) codeframe.code_frame[++pc] = curr_arg;
+            if (instr_info_list[curr_instr.instr].instr_arg_type != NO_ARG)
+            {
+                codeframe.code_frame[pc + 1] = curr_arg;
+                pc += 2;
+            }
+            else
+                pc += 1;
         }
-        pc++;
+
     }
 
-    if (flag_errors == INPUT_OK)
+    if (flag_are_errors_in_program == INPUT_OK)
     {
         size_t num_of_w_cells = fwrite(codeframe.code_frame, sizeof(cell), pc, executable_file);
-        if (num_of_w_cells != (size_t)pc) flag_errors = ERR_ARE_ERRORS;
+        if (num_of_w_cells != (size_t)pc) flag_are_errors_in_program = ERR_ARE_ERRORS;
     }
 
     free(codeframe.code_frame);
@@ -189,14 +202,14 @@ InputErrors PassSecond(char* program_file_name, char* executable_file_name, Poin
 
     fclose(program_file);
     fclose(executable_file);
-    return flag_errors;
+    return flag_are_errors_in_program;
 }
 
 InstructionsCodes GetInstructionCode(char* buffer)
 {
     for (unsigned int i = 0; i < num_of_instr; i++)
     {
-        if (strcmp(instructions_list[i], buffer) == 0)
+        if (strcmp(instr_names_list[i], buffer) == 0)
             return (InstructionsCodes)i;
     }
     return (InstructionsCodes)0;

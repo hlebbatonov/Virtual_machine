@@ -5,6 +5,9 @@ struct CPU
     stack_t* stack;
     unsigned int pc;
     cell regs[NUM_OF_REGS];
+    stack_t* ret_points;
+    cell* video_ram;
+    size_t video_ram_size;
 };
 
 Errors FuncPUSH(CPU* cpu, CodeFrame* codeframe);
@@ -17,6 +20,11 @@ Errors FuncJB(CPU* cpu, CodeFrame* codeframe);
 Errors FuncJBE(CPU* cpu, CodeFrame* codeframe);
 Errors FuncJE(CPU* cpu, CodeFrame* codeframe);
 Errors FuncJNE(CPU* cpu, CodeFrame* codeframe);
+Errors FuncCALL(CPU* cpu, CodeFrame* codeframe);
+Errors FuncRET(CPU* cpu, CodeFrame* codeframe);
+Errors FuncVPUSH(CPU* cpu, CodeFrame* codeframe);
+Errors FuncVPOP(CPU* cpu, CodeFrame* codeframe);
+Errors FuncVOUT(CPU* cpu, CodeFrame* codeframe);
 Errors FuncOperand(CPU* cpu, CodeFrame* codeframe);
 Errors FuncOUT(CPU* cpu, CodeFrame* codeframe);
 
@@ -48,6 +56,11 @@ const RunOneInstr instr_list[] =
     [JBE] = FuncJMPCond,
     [JE] = FuncJMPCond,
     [JNE] = FuncJMPCond,
+    [CALL] = FuncCALL,
+    [RET] = FuncRET,
+    [VPUSH] = FuncVPUSH,
+    [VPOP] = FuncVPOP,
+    [VOUT] = FuncVOUT,
     [ADD] = FuncOperand,
     [SUB] = FuncOperand,
     [MUL] = FuncOperand,

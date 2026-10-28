@@ -10,6 +10,7 @@ union cell
     int instr;
     int point;
     int reg;
+    unsigned int index;
     float num;
 };
 
@@ -26,8 +27,8 @@ typedef cell stack_elem;
 #define ELEMS_FOR_CANARY 1
 #define NUM_OF_CANARIES 2
 
-#define STACK_CANARY_LEFT (float)0xC00F
-#define STACK_CANARY_RIGHT (float)0xBA0B
+#define STACK_CANARY_LEFT 0xC00F
+#define STACK_CANARY_RIGHT 0xBA0B
 
 #define MIN_CAPACITY_TO_RESIZE 10
 #define MAX_SIZE 1000000
@@ -60,6 +61,8 @@ enum Errors
     ERR_DATA_HASH_CHANGED, //fatal
     ERR_STACK_HASH_CHANGED, //fatal
     ERR_DIV_ZERO,
+    ERR_POP_FROM_EMPTY_STACK,
+    ERR_INVALID_INDEX,
     ERR_UNKNOWN_INSTRUCTION
 };
 

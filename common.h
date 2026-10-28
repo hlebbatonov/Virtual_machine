@@ -7,6 +7,7 @@
 #include <math.h>
 #include "stack.h"
 
+
 #define MAX_INPUT_SIZE 100000000
 #define START_CODEFRAME_SIZE 50
 #define BUFFER_SIZE 50
@@ -17,6 +18,12 @@
 #define START_POINTS_ARR_SIZE 20
 #define MAX_ARG_SIZE 10
 #define MAX_EXE_FILE_SIZE 1000
+#define START_RET_POINTS_ARR 20
+
+const unsigned int screen_width = 10;
+const unsigned int screen_height = 10;
+const unsigned int video_ram_size = screen_width * screen_height;
+
 
 enum InputErrors
 {
@@ -41,7 +48,11 @@ enum InstructionsCodes
     JBE,
     JE,
     JNE,
-
+    CALL,
+    RET,
+    VPUSH,
+    VPOP,
+    VOUT,
     ADD,
     SUB,
     MUL,
@@ -50,29 +61,74 @@ enum InstructionsCodes
     HLT
 };
 
-static const char* instructions_list[] =
+static const char* instr_names_list[] =
 {
-    "UNKNOWN INSTRUCTION",
-    "PUSH",
-    "RPUSH",
-    "RPOP",
-    "JMP",
-    "JA",
-    "JAE",
-    "JB",
-    "JBE",
-    "JE",
-    "JNE",
+    [0]     = "UNKNOWN INSTRUCTION",
+    [PUSH]  = "PUSH",
+    [RPUSH] = "RPUSH",
+    [RPOP]  = "RPOP",
+    [JMP]   = "JMP",
+    [JA]    = "JA",
+    [JAE]   = "JAE",
+    [JB]    = "JB",
+    [JBE]   = "JBE",
+    [JE]    = "JE",
+    [JNE]   = "JNE",
+    [CALL]  = "CALL",
+    [RET]   = "RET",
+    [VPUSH] = "VPUSH",
+    [VPOP]  = "VPOP",
+    [VOUT]  = "VOUT",
+    [ADD]   = "ADD",
+    [SUB]   = "SUB",
+    [MUL]   = "MUL",
+    [DIV]   = "DIV",
+    [OUT]   = "OUT",
+    [HLT]   = "HLT"
+};
+const int num_of_instr = sizeof(instr_names_list) / sizeof(instr_names_list[0]);
 
-    "ADD",
-    "SUB",
-    "MUL",
-    "DIV",
-    "OUT",
-    "HLT"
+enum ArgTypes
+{
+    NO_ARG = 0,
+    NUM,
+    REG,
+    INDEX,
+    POINT
 };
 
-const int num_of_instr = sizeof(instructions_list) / sizeof(instructions_list[0]);
+struct InstrInfo
+{
+    InstructionsCodes instr_code;
+    const char* instr_name;
+    unsigned int instr_num_args;
+    ArgTypes instr_arg_type;
+};
+
+static const InstrInfo instr_info_list[] =
+{
+    [PUSH]  = {PUSH,  "PUSH",  1, NUM},
+    [RPUSH] = {RPUSH, "RPUSH", 1, REG},
+    [RPOP]  = {RPOP,  "RPOP",  1, REG},
+    [JMP]   = {JMP,   "JMP",   1, POINT},
+    [JA]    = {JA,    "JA",    1, POINT},
+    [JAE]   = {JAE,   "JAE",   1, POINT},
+    [JB]    = {JB,    "JB",    1, POINT},
+    [JBE]   = {JBE,   "JBE",   1, POINT},
+    [JE]    = {JE,    "JE",    1, POINT},
+    [JNE]   = {JNE,   "JNE",   1, POINT},
+    [CALL]  = {CALL,  "CALL",  1, POINT},
+    [RET]   = {RET,   "RET",   0, NO_ARG},
+    [VPUSH] = {VPUSH, "VPUSH", 1, INDEX},
+    [VPOP]  = {VPOP,  "VPOP",  1, INDEX},
+    [VOUT]  = {VOUT,  "VOUT",  0, NO_ARG},
+    [ADD]   = {ADD,   "ADD",   0, NO_ARG},
+    [SUB]   = {SUB,   "SUB",   0, NO_ARG},
+    [MUL]   = {MUL,   "MUL",   0, NO_ARG},
+    [DIV]   = {DIV,   "DIV",   0, NO_ARG},
+    [OUT]   = {OUT,   "OUT",   0, NO_ARG},
+    [HLT]   = {HLT,   "HLT",   0, NO_ARG}
+};
 
 struct CodeFrame
 {

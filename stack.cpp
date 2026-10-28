@@ -27,6 +27,7 @@ Errors StackPush(stack_t* stack, stack_elem elem)
 Errors StackPop(stack_t* stack, stack_elem* elem)
 {
     VERIFY_AND_RETURN(stack);
+
     if (stack->size == 0) return ERR_ZERO_LENGTH;
 
     *elem = stack->data[--stack->size + ELEMS_FOR_CANARY];
@@ -47,6 +48,7 @@ Errors StackPop(stack_t* stack, stack_elem* elem)
     stack->stack_hash = CalcHashDJB2(stack, sizeof(*stack));
 
     VERIFY_AND_RETURN(stack);
+
     return OK;
 }
 
@@ -161,8 +163,9 @@ Errors ResizeData(stack_t* stack)
 {
     if (stack == NULL) return ERR_STACK_NULL_POINTER;
     if (stack->data == NULL) return ERR_NULL_POINTER;
-    if (!IsEqual(stack->stack_canary_left, CANARY_LEFT)) return ERR_DEAD_LEFT_CANARY;
-    if (!IsEqual(stack->stack_canary_right, CANARY_RIGHT)) return ERR_DEAD_RIGHT_CANARY;
+
+    if (!IsEqual(stack->stack_canary_left, STACK_CANARY_LEFT)) {return ERR_DEAD_LEFT_CANARY;}
+    if (!IsEqual(stack->stack_canary_right, STACK_CANARY_RIGHT)) return ERR_DEAD_RIGHT_CANARY;
     if (stack->size > stack->capacity) return ERR_STACK_OVERFLOWED;
 
     stack_elem* new_data = (stack_elem*)realloc(stack->data, (stack->capacity + NUM_OF_CANARIES) * sizeof(stack_elem));
