@@ -5,12 +5,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+enum ColorCodes {
+    COLOR_BLACK = 0,
+    COLOR_BLUE,
+    COLOR_GREEN,
+    COLOR_CYAN,
+    COLOR_RED,
+    COLOR_MAGENTA,
+    COLOR_YELLOW,
+    COLOR_WHITE,
+    NUM_OF_COLORS
+};
+
 union cell
 {
     int instr;
     int point;
     int reg;
-    unsigned int index;
+    int index;
+    ColorCodes color;
     float num;
 };
 
@@ -63,6 +76,7 @@ enum Errors
     ERR_DIV_ZERO,
     ERR_POP_FROM_EMPTY_STACK,
     ERR_INVALID_INDEX,
+    ERR_NEGATIVE_VAL_UNDER_SQRT,
     ERR_UNKNOWN_INSTRUCTION
 };
 

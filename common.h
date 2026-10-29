@@ -9,20 +9,21 @@
 
 
 #define MAX_INPUT_SIZE 100000000
-#define START_CODEFRAME_SIZE 50
+#define START_CODEFRAME_SIZE 400
 #define BUFFER_SIZE 50
 #define START_STACK_SIZE 10
 #define MAX_INSTR_SIZE 50
 #define INSTR_NAME_SIZE 50
 #define POINT_NAME_SIZE 16
 #define START_POINTS_ARR_SIZE 20
-#define MAX_ARG_SIZE 10
+#define MAX_ARG_SIZE 100
 #define MAX_EXE_FILE_SIZE 1000
 #define START_RET_POINTS_ARR 20
 
-const unsigned int screen_width = 10;
-const unsigned int screen_height = 10;
-const unsigned int video_ram_size = screen_width * screen_height;
+const unsigned int screen_width = 16;
+const unsigned int screen_height = 16;
+const unsigned int num_of_pixels = screen_width * screen_height;
+const unsigned int ram_size = 256;
 
 
 enum InputErrors
@@ -50,6 +51,9 @@ enum InstructionsCodes
     JNE,
     CALL,
     RET,
+    MPUSH,
+    MPOP,
+    MOUT,
     VPUSH,
     VPOP,
     VOUT,
@@ -58,6 +62,7 @@ enum InstructionsCodes
     MUL,
     DIV,
     OUT,
+    SQRT,
     HLT
 };
 
@@ -76,6 +81,9 @@ static const char* instr_names_list[] =
     [JNE]   = "JNE",
     [CALL]  = "CALL",
     [RET]   = "RET",
+    [MPUSH] = "MPUSH",
+    [MPOP]  = "MPOP",
+    [MOUT]  = "MOUT",
     [VPUSH] = "VPUSH",
     [VPOP]  = "VPOP",
     [VOUT]  = "VOUT",
@@ -84,6 +92,7 @@ static const char* instr_names_list[] =
     [MUL]   = "MUL",
     [DIV]   = "DIV",
     [OUT]   = "OUT",
+    [SQRT]  = "SQRT",
     [HLT]   = "HLT"
 };
 const int num_of_instr = sizeof(instr_names_list) / sizeof(instr_names_list[0]);
@@ -119,6 +128,9 @@ static const InstrInfo instr_info_list[] =
     [JNE]   = {JNE,   "JNE",   1, POINT},
     [CALL]  = {CALL,  "CALL",  1, POINT},
     [RET]   = {RET,   "RET",   0, NO_ARG},
+    [MPUSH] = {MPUSH, "MPUSH", 1, INDEX},
+    [MPOP]  = {MPOP,  "MPOP",  1, INDEX},
+    [MOUT]  = {MOUT,  "MOUT",  0, NO_ARG},
     [VPUSH] = {VPUSH, "VPUSH", 1, INDEX},
     [VPOP]  = {VPOP,  "VPOP",  1, INDEX},
     [VOUT]  = {VOUT,  "VOUT",  0, NO_ARG},
@@ -127,6 +139,7 @@ static const InstrInfo instr_info_list[] =
     [MUL]   = {MUL,   "MUL",   0, NO_ARG},
     [DIV]   = {DIV,   "DIV",   0, NO_ARG},
     [OUT]   = {OUT,   "OUT",   0, NO_ARG},
+    [SQRT]  = {SQRT,  "SQRT",  0, NO_ARG},
     [HLT]   = {HLT,   "HLT",   0, NO_ARG}
 };
 
@@ -152,4 +165,3 @@ static const char* reg_names[NUM_OF_REGS] =
     [REG_CX] = "CX",
     [REG_DX] = "DX",
 };
-

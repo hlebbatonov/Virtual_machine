@@ -30,20 +30,14 @@ struct PointsArr
 #define SAFE_REALLOC_POINTS_ARR() do \
 {                                                                                                           \
     size_t old_capacity = points_arr->points_arr_capacity;                                                  \
-    points_arr->points_arr_capacity *= 2;                                                                   \
-    char** new_points_arr = (char**)realloc(points_arr->points_arr,                                         \
-        points_arr->points_arr_capacity * sizeof(char*));                                                   \
-    if (new_points_arr == NULL)                                                                             \
-    {                                                                                                       \
-        points_arr->points_arr_capacity = 0;                                                                \
+    points_arr->points_arr_capacity = (old_capacity == 0) ? 20 : old_capacity * 2;                          \
+    char** new_points_arr = (char**)calloc(points_arr->points_arr_capacity, sizeof(char*));                 \
+    if (new_points_arr == NULL) return ERR_CALLOC_FAILED;                                                   \
+    if (points_arr->points_arr != NULL) {                                                                   \
+        memcpy(new_points_arr, points_arr->points_arr, old_capacity * sizeof(char*));                       \
         free(points_arr->points_arr);                                                                       \
-        points_arr->points_arr = NULL;                                                                      \
-        return ERR_CALLOC_FAILED;                                                                           \
     }                                                                                                       \
     points_arr->points_arr = new_points_arr;                                                                \
-    for (size_t i = old_capacity; i < points_arr->points_arr_capacity; i++) {                               \
-        points_arr->points_arr[i] = NULL;                                                                   \
-    }                                                                                                       \
 } while(0)
 
 InputErrors PassFirst(char* program_file_name, PointsArr* points_arr);
@@ -105,7 +99,7 @@ InputErrors PassFirst(char* program_file_name, PointsArr* points_arr)
         if (sscanf(point_name, "%s", temp_instr) == 1)
         {
             InstructionsCodes temp_instr_code = GetInstructionCode(temp_instr);
-            if (instr_info_list[temp_instr_code].instr_arg_type != NO_ARG) pc += 2;
+            if (0 != temp_instr_code && instr_info_list[temp_instr_code].instr_arg_type != NO_ARG) pc += 2;
             else pc++;
         }
     }
@@ -171,9 +165,9 @@ InputErrors PassSecond(char* program_file_name, char* executable_file_name, Poin
         }
         else if (instr_info_list[curr_instr.instr].instr_arg_type == INDEX)
         {
-            int input_res = sscanf(buffer, "%s [%u]", temp_instr, &curr_arg.index);
+            int input_res = sscanf(buffer, "%s [%d]", temp_instr, &curr_arg.index);
             VALIDATE_LINE(input_res != 2, "expected 1 index arg");
-            VALIDATE_LINE(curr_arg.index < 0 || curr_arg.index >= video_ram_size, "invalid index");
+            VALIDATE_LINE(curr_arg.index < 0 || curr_arg.index >= ram_size, "invalid index");
         }
 
 
