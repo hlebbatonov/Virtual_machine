@@ -6,6 +6,15 @@ Errors InitCodeframe(CodeFrame* codeframe);
 Errors InitRam(CPU* cpu);
 Errors InitVideoRam(CPU* cpu);
 
+#define CHECK_ERR(error, msg)                   \
+do                                              \
+{                                               \
+    if(error != OK) {                           \
+        fprintf(stderr, msg);\
+        return 1;                                   \
+    }                                           \
+} while(0)
+
 int main(int argc, char *argv[])
 {
     if (argc < 2)
@@ -29,6 +38,7 @@ int main(int argc, char *argv[])
 
     cpu1.ret_points = (stack_t*)calloc(1, sizeof(stack_t));
     err_init = StackInit(cpu1.ret_points, START_RET_POINTS_ARR);
+
     if (err_init != OK) {printf("Fatal error: no memory\n"); return 1;}
 
     err_init = InitRam(&cpu1);
