@@ -1,6 +1,6 @@
 # Virtual Machine
 
-A small stack-based virtual machine written in C++. The repository includes an assembler/compiler that turns a text program into a binary code frame, plus a VM that executes it. The VM also has 16×16 video memory and renders its output in a window using [raylib](https://www.raylib.com/).
+A small stack-based virtual machine written in C. The repository includes an assembler/compiler that turns a text program into a binary code frame, plus a VM that executes it. The VM also has 16×16 video memory and renders its output in a window using [raylib](https://www.raylib.com/).
 
 ## Components
 
